@@ -519,13 +519,17 @@ public class BeanDefinitionParserDelegate {
 			//解析bean标签的属性,并封装到BeanDefinition中
 			parseBeanDefinitionAttributes(ele, beanName, containingBean, bd);
 			bd.setDescription(DomUtils.getChildElementValueByTagName(ele, DESCRIPTION_ELEMENT));
-
+			//解析meta子标签
 			parseMetaElements(ele, bd);
+			//解析lookup子标签
 			parseLookupOverrideSubElements(ele, bd.getMethodOverrides());
+			//解析replaced-method子标签
 			parseReplacedMethodSubElements(ele, bd.getMethodOverrides());
-
+			//解析construct-arg子标签
 			parseConstructorArgElements(ele, bd);
+			//解析property子标签
 			parsePropertyElements(ele, bd);
+			//解析qualifier子标签
 			parseQualifierElements(ele, bd);
 
 			bd.setResource(this.readerContext.getResource());
