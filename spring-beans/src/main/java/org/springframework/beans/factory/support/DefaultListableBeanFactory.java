@@ -928,9 +928,10 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		Assert.hasText(beanName, "Bean name must not be empty");
 		Assert.notNull(beanDefinition, "BeanDefinition must not be null");
-
+		//判断是否为AbstractBeanDefinition类型,基本上所有的BeanDefinition实现类都继承了AbstractBeanDefinition抽象类
 		if (beanDefinition instanceof AbstractBeanDefinition) {
 			try {
+				//验证Bean是否合法,主要是对Bean是否允许覆盖,以及该Bean是否是一个BeanClass
 				((AbstractBeanDefinition) beanDefinition).validate();
 			}
 			catch (BeanDefinitionValidationException ex) {
@@ -938,12 +939,21 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						"Validation of bean definition failed", ex);
 			}
 		}
-
+		//this为容器,DefaultListableBeanFactory对象,BeanDefinitionMap属性为key为BeanName,value为BeanDefinition的concurrentHashMap集合
+		//通过beanName获得当前容器中已经存在的同名BeanDefinition对象
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
+		//如果存在同名的BeanDefinition对象
 		if (existingDefinition != null) {
+			//判断容器设置Bean是否允许覆盖(同名就覆盖),默认是true,所以!!isAllowBeanDefinitionOverriding()为false
 			if (!isAllowBeanDefinitionOverriding()) {
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 			}
+			/**
+			 * Spring 可以对 bd 设置不同的角色,了解即可，不重要
+			 * 用户定义 int ROLE_APPLICATION = 0;
+			 * 某些复杂的配置 int ROLE_SUPPORT = 1;
+			 * 完全内部使用 int ROLE_INFRASTRUCTURE = 2;
+			 */
 			else if (existingDefinition.getRole() < beanDefinition.getRole()) {
 				// e.g. was ROLE_APPLICATION, now overriding with ROLE_SUPPORT or ROLE_INFRASTRUCTURE
 				if (logger.isInfoEnabled()) {
@@ -966,9 +976,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							"] with [" + beanDefinition + "]");
 				}
 			}
+			//放入BeanDefinitionMap集合中
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
+			//判断Bean的实例化是否已经开始
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
 				synchronized (this.beanDefinitionMap) {

@@ -53,6 +53,8 @@ public interface NamespaceHandler {
 	 * construction but before any custom elements are parsed.
 	 * @see NamespaceHandlerSupport#registerBeanDefinitionParser(String, BeanDefinitionParser)
 	 */
+	//根据实现类类型来调用init方法
+	//以处理<context:component-scan>的ContextNamespceHandler为例
 	void init();
 
 	/**

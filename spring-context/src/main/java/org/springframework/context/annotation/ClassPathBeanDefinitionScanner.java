@@ -163,6 +163,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		this.registry = registry;
 
 		if (useDefaultFilters) {
+			//注册注解过滤器
 			registerDefaultFilters();
 		}
 		setEnvironment(environment);
@@ -271,24 +272,35 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 */
 	protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
+		//创建一个Set集合,后面扫描后添加BeanDefinitionHolder对象
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
+		//对基本包数组进行遍历
 		for (String basePackage : basePackages) {
+			//扫描包并将带有注解的.class封装成BeanDefinition对象,包装成set集合
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
+			//循环封装ScanedBeandefinition对象其他的属性
 			for (BeanDefinition candidate : candidates) {
+				//解析scope注解的值，如果没有默认为singleton
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 				if (candidate instanceof AbstractBeanDefinition) {
+					//设置lazy-init属性,初始化和销毁的方法名,是否强制执行(默认为false)
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
+					//设置@depends-on,校验是否有@lazy注解,设置@primary注解,@meta注解,@Description注解等
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+				//根据beanName到当前容器中的已有Bean校验,查看是否重复
 				if (checkCandidate(beanName, candidate)) {
+					//ScanedBeanDefinition对象封装成BeanDefinitionHolder
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+					//this为ClassPathBeanDefinitionScanner对象
+					//this.registry为容器对象(DefaultListableBeanFactory对象)
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}

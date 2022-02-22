@@ -546,14 +546,21 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
+			//为BeanFactory(DefaultListableBeanFactory)设置一些属性
 			// Prepare the bean factory for use in this context.
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				//在标准初始化之后修改应用程序上下文的内部 bean 工厂。所有 bean 定义都将被加载，
+				//但还没有 bean 被实例化。这允许在某些 ApplicationContext 实现中注册特殊的 BeanPostProcessors 等。
+				//默认方法体为空
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
+				//实例化并调用所有已注册的 BeanFactoryPostProcessor bean，如果给定，则尊重显式顺序。
+				//必须在单例实例化之前调用
+				//是对BeanDefinitionRegistryPostProcessor和BeanFactoryPostProcessor两个接口的调用
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
@@ -675,11 +682,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
 		beanFactory.setBeanClassLoader(getClassLoader());
+		//设置表达式解析器(SpEL),主要设置默认的解析标识,比如#{打头,}结尾,还有一些其他的配置
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+		//注册环境变量等信息,以为配置文件(默认读取default)
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
+		//配置ApplicationContextAwareProcessor给上下文对象,假若bean对象的类是ApplicationContextAware类型的话，
+		//就会调用invokeAwareInterfaces方法，将spring容器赋值给bean对象的applicationContext属性。
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+		//设置上下文设置依赖,自动装配的的需要忽略的接口,默认是BeanFactoryAware接口一定会忽略
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
@@ -687,30 +699,57 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.ignoreDependencyInterface(MessageSourceAware.class);
 		beanFactory.ignoreDependencyInterface(ApplicationContextAware.class);
 
+		//使用相应的自动装配值注册一个特殊的依赖类型。
+		//这适用于应该是可自动装配但未在工厂中定义为 bean 的工厂/上下文引用：例如，ApplicationContext 类型的依赖项解析为 bean 所在的 ApplicationContext 实例。
+		//注意：在普通的 BeanFactory 中没有注册这样的默认类型，甚至 BeanFactory 接口本身也没有
 		// BeanFactory interface not registered as resolvable type in a plain factory.
 		// MessageSource registered (and found for autowiring) as a bean.
+		//beanFactory-->DefaultListableBeanFactory
+		//this-->这里指的是ClassPathXmlApplicationContext
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
 		beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
+		//BeanPostProcessor检测实现ApplicationListener接口的 bean。
+		// 这会捕获无法被getBeanNamesForType可靠检测到的 bean 以及仅对顶级 bean 起作用的相关操作
+		// 主要是对InnerBean的处理。
 		// Register early post-processor for detecting inner beans as ApplicationListeners.
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.
+		//如果包含org.springframework.instrument.classloading.LoadTimeWeaver的Bean,默认没有
 		if (beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
+			/**
+			 * 在Java 语言中，从织入切面的方式上来看，存在三种织入方式：①编译期织入②类加载期织入和③运行期织入。
+			 * 编译期织入是指在Java编译期，采用特殊的编译器，将切面织入到Java类中；
+			 * 而类加载期织入则指通过特殊的类加载器,在类字节码加载到JVM时，织入切面；
+			 * 运行期织入则是采用CGLib工具或JDK动态代理进行切面的织入。
+			 * AspectJ采用编译期织入和类加载期织入的方式织入切面，是语言级的AOP实现，提供了完备的AOP支持。它用AspectJ语言定义切面，在编译期或类加载期将切面织入到Java类中。
+			 * AspectJ提供了两种切面织入方式，
+			 * 第一种通过特殊编译器，在编译期，将AspectJ语言编写的切面类织入到Java类中，可以通过一个Ant或Maven任务来完成这个操作；
+			 * 第二种方式是类加载期织入，也简称为LTW（Load Time Weaving）。
+			 * 如何使用Load Time Weaving？
+			 * 首先，需要通过JVM的-javaagent参数设置LTW的织入器类包，以代理JVM默认的类加载器；
+			 * 第二，LTW织入器需要一个 aop.xml文件，在该文件中指定切面类和需要进行切面织入的目标类
+			 */
 			beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
 			// Set a temporary ClassLoader for type matching.
+			//设置临时的ClassLoader,默认无,涉及到类加载(load_time)织入才会用到,而且一旦加载完,就会删除
 			beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
 		}
 
 		// Register default environment beans.
+		//判断容器中是否有environment名字的bean,默认没有,所以会注册一个单例Bean,会放在singletonObject集合中,
+		// 名字会放在registeredSingletons集合中
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
 		}
+		//同理注册systemProperties单例Bean
 		if (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) {
 			beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());
 		}
+		//同理注册systemEnvironment单例Bean
 		if (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) {
 			beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());
 		}
