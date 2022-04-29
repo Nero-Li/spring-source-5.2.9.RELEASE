@@ -83,13 +83,18 @@ abstract class ConfigurationClassUtils {
 	 */
 	public static boolean checkConfigurationClassCandidate(
 			BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
-
+		//获取BeanDefinition的className
 		String className = beanDef.getBeanClassName();
+		//如果className为null且工厂方法属性不为null(代表通过工厂方法实例化的),返回false
 		if (className == null || beanDef.getFactoryMethodName() != null) {
 			return false;
 		}
-
+		/**
+		 * 根据Bean定义信息解析成为一个注解元数据对象AnnotationMetadata metadata
+		 * 可能是个AnnotatedBeanDefinition，也可能是个StandardAnnotationMetadata
+		 */
 		AnnotationMetadata metadata;
+		//如果BeanDefinition是AnnotatedBeanDefinition
 		if (beanDef instanceof AnnotatedBeanDefinition &&
 				className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
 			// Can reuse the pre-parsed metadata from the given BeanDefinition...
@@ -99,12 +104,15 @@ abstract class ConfigurationClassUtils {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
 			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
+			//如果传进来的BeanDefinition的class是BeanFactoryPostProcessor或者BeanPostProcessor或者AopInfrastructureBean或者EventListenerFactory
+			//直接返回false
 			if (BeanFactoryPostProcessor.class.isAssignableFrom(beanClass) ||
 					BeanPostProcessor.class.isAssignableFrom(beanClass) ||
 					AopInfrastructureBean.class.isAssignableFrom(beanClass) ||
 					EventListenerFactory.class.isAssignableFrom(beanClass)) {
 				return false;
 			}
+			//从StandardAnnotationMetadata转换成AnnotationMetadata
 			metadata = AnnotationMetadata.introspect(beanClass);
 		}
 		else {
@@ -120,19 +128,38 @@ abstract class ConfigurationClassUtils {
 				return false;
 			}
 		}
-
+		/**
+		 * full模式使用特性：
+		 * 	1. full模式下的配置类会被CGLIB代理生成代理类取代原始类型(在容器中)
+		 * 	2. full模式下的@Bean方法不能是private和final
+		 * 	3. 单例scope下不同@Bean方法可以互相引用，达到单实例的语义
+		 * 	4. 该模式下，对于内部类是没有限制的：可以是Full模式或者Lite模式
+		 * 	full模式的方法调用总是返回容器注入的Bean是通过BeanMethodInterceptor拦截器实现的。
+		 * lite模式使用特性：
+		 * 	1. 该模式下，配置类本身不会被CGLIB增强，放进IoC容器内的就是类本身
+		 * 	2. 该模式下，对于内部类是没有限制的：可以是Full模式或者Lite模式
+		 * 	3. 该模式下，配置类内部不能通过方法调用来处理依赖，否则每次生成的都是一个新实例而并非IoC容器内的单例
+		 * 	4. 该模式下，配置类就是一普通类，所以@Bean方法可以使用private/final等进行修饰
+		 */
+		//判断BeanDefinition元属性中是否有Configuration
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+		//如果有Configuration注解且Configuration注解的proxyBeanMethods属性为true(默认值)
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+			//那么mark一下它是Full模式的配置
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
+		//如果有@Component,@ComponentScan,@Import,@ImportResource注解,或者类没有任何注解,但是方法有@Bean注解
 		else if (config != null || isConfigurationCandidate(metadata)) {
+			//mark一下它是Lite模式的配置(其实被@Configuration修饰，但是属性proxyBeanMethods = false也是lite)
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
 		else {
+			//没有Configuration就直接淘汰
 			return false;
 		}
 
 		// It's a full or lite configuration candidate... Let's determine the order value, if any.
+		//如果有@Order注解,也解析,到这一步的BeanDefinition一定是ConfigurationClass
 		Integer order = getOrder(metadata);
 		if (order != null) {
 			beanDef.setAttribute(ORDER_ATTRIBUTE, order);
@@ -155,6 +182,7 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Any of the typical annotations found?
+		//有Component,ComponentScan,Import,ImportResource注解也返回true
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;
@@ -162,6 +190,7 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Finally, let's look for @Bean methods...
+		//如果类中没有任何注解,但是类中的方法被@Bean注解标识也返回true
 		try {
 			return metadata.hasAnnotatedMethods(Bean.class.getName());
 		}
