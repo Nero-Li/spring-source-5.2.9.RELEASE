@@ -190,7 +190,10 @@ class ConfigurationClassParser {
 						"Failed to parse configuration class [" + bd.getBeanClassName() + "]", ex);
 			}
 		}
-
+		// 执行找到的 DeferredImportSelector
+		// DeferredImportSelector 是 ImportSelector 的一个变种。
+		// ImportSelector 被设计成其实和@Import注解的类同样的导入效果，但是实现 ImportSelector的类可以条件性地决定导入哪些配置。
+		// DeferredImportSelector 的设计目的是在所有其他的配置类被处理后才处理。这也正是该语句被放到本函数最后一行的原因。
 		this.deferredImportSelectorHandler.process();
 	}
 
@@ -205,6 +208,7 @@ class ConfigurationClassParser {
 	}
 
 	protected final void parse(AnnotationMetadata metadata, String beanName) throws IOException {
+		// Predicate<String> DEFAULT_EXCLUSION_FILTER = className ->(className.startsWith("java.lang.annotation.") || className.startsWith("org.springframework.stereotype."));
 		processConfigurationClass(new ConfigurationClass(metadata, beanName), DEFAULT_EXCLUSION_FILTER);
 	}
 
@@ -232,6 +236,8 @@ class ConfigurationClassParser {
 		if (existingClass != null) {
 			if (configClass.isImported()) {
 				if (existingClass.isImported()) {
+					//如果要处理的配置类configClass在已经分析处理的配置类记录中已存在，
+					//合并二者的importedBy属性
 					existingClass.mergeImportedBy(configClass);
 				}
 				// Otherwise ignore new imported config class; existing non-imported class overrides it.
@@ -246,12 +252,17 @@ class ConfigurationClassParser {
 		}
 
 		// Recursively process the configuration class and its superclass hierarchy.
+		// 从当前配置类configClass开始向上沿着类继承结构逐层执行doProcessConfigurationClass,
+		// 直到遇到的父类是由Java提供的类结束循环
 		SourceClass sourceClass = asSourceClass(configClass, filter);
 		do {
+			// 循环处理配置类configClass直到sourceClass变为null
+			// doProcessConfigurationClass的返回值是其参数configClass的父类，
+			// 如果该父类是由Java提供的类或者已经处理过，返回null
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass, filter);
 		}
 		while (sourceClass != null);
-
+		// 需要被处理的配置类configClass已经被分析处理，将它记录到已处理配置类记录
 		this.configurationClasses.put(configClass, configClass);
 	}
 
@@ -270,6 +281,7 @@ class ConfigurationClassParser {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
+			//首先递归处理嵌套类
 			processMemberClasses(configClass, sourceClass, filter);
 		}
 
