@@ -209,6 +209,7 @@ class ConfigurationClassParser {
 
 	protected final void parse(AnnotationMetadata metadata, String beanName) throws IOException {
 		// Predicate<String> DEFAULT_EXCLUSION_FILTER = className ->(className.startsWith("java.lang.annotation.") || className.startsWith("org.springframework.stereotype."));
+		//将beanName和解析到的元属性信息封装成ConfigurationClass对象
 		processConfigurationClass(new ConfigurationClass(metadata, beanName), DEFAULT_EXCLUSION_FILTER);
 	}
 
@@ -231,9 +232,10 @@ class ConfigurationClassParser {
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
-
+		//尝试获取当前要解析的配置类
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
+			//配置类是否是通过别的配置类通过import导入进来的
 			if (configClass.isImported()) {
 				if (existingClass.isImported()) {
 					//如果要处理的配置类configClass在已经分析处理的配置类记录中已存在，
@@ -305,8 +307,10 @@ class ConfigurationClassParser {
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
+			//循环解析(componentScans为解析出来的AnnotationAttributes集合)
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				//扫描出来的类封装成BeanDefinitionHolder集合
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
@@ -316,6 +320,7 @@ class ConfigurationClassParser {
 						bdCand = holder.getBeanDefinition();
 					}
 					if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
+						//如果扫描出来的Bean又是一个配置类,递归解析
 						parse(bdCand.getBeanClassName(), holder.getBeanName());
 					}
 				}
@@ -347,7 +352,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process default methods on interfaces
-		// 6. 处理interfaces中的default methods
+		// 6. 处理interfaces中的default methods(配置类接口)
 		processInterfaces(configClass, sourceClass);
 
 		// Process superclass, if any
