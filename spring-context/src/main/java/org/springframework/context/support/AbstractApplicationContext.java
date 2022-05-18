@@ -833,8 +833,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see org.springframework.context.event.SimpleApplicationEventMulticaster
 	 */
 	protected void initApplicationEventMulticaster() {
+		//获取容器对象->DefaultLisableBeanFactory
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+		//判断容器中是否有一个叫applicationEventMulticaster的Bean，默认是没有的
 		if (beanFactory.containsLocalBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME)) {
+			//如果有就实例化
 			this.applicationEventMulticaster =
 					beanFactory.getBean(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, ApplicationEventMulticaster.class);
 			if (logger.isTraceEnabled()) {
@@ -842,7 +845,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 		}
 		else {
+			//没有就创建SimpleApplicationEventMulticaster对象作为事件多播器
 			this.applicationEventMulticaster = new SimpleApplicationEventMulticaster(beanFactory);
+			//并将其注册为单例Bean
 			beanFactory.registerSingleton(APPLICATION_EVENT_MULTICASTER_BEAN_NAME, this.applicationEventMulticaster);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No '" + APPLICATION_EVENT_MULTICASTER_BEAN_NAME + "' bean, using " +
