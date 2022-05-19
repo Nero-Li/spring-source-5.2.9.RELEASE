@@ -576,9 +576,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				//模板设计模式,默认没有实现,但是在SpringBoot中,这个方法可以用来做内置的tomcat启动
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 注册事件监听器,发布内置的事件
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
@@ -799,15 +801,22 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Use parent's if none defined in this context.
 	 */
 	protected void initMessageSource() {
+		//获取容器->DefaultListableBeanFactory
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+		//判断bean工厂是否包含bean——messageSource,默认没有自定义
 		if (beanFactory.containsLocalBean(MESSAGE_SOURCE_BEAN_NAME)) {
+			//实例化
 			this.messageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME, MessageSource.class);
 			// Make MessageSource aware of parent MessageSource.
+			//如果本对象的application不为null且本对象的messageSource属于HierarchicalMessageSource类型
 			if (this.parent != null && this.messageSource instanceof HierarchicalMessageSource) {
+				//本对象的messagesource强转为HierarchicalMessageSource
 				HierarchicalMessageSource hms = (HierarchicalMessageSource) this.messageSource;
+				//如果hms的父级messageSource=null
 				if (hms.getParentMessageSource() == null) {
 					// Only set parent context as parent MessageSource if no parent MessageSource
 					// registered already.
+					//如果context有父级则返回父级,没有则返回自身。把context丢到dms的ParentMessageSource中
 					hms.setParentMessageSource(getInternalParentMessageSource());
 				}
 			}
@@ -817,9 +826,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 		else {
 			// Use empty MessageSource to be able to accept getMessage calls.
+			//创建一个空的messageSource
 			DelegatingMessageSource dms = new DelegatingMessageSource();
+			//如果context有父级则返回父级,没有则返回自身。把context丢到dms的ParentMessageSource中
 			dms.setParentMessageSource(getInternalParentMessageSource());
+			//本对象的messageSource=ParentMessageSource
 			this.messageSource = dms;
+			//注册为单例bean
 			beanFactory.registerSingleton(MESSAGE_SOURCE_BEAN_NAME, this.messageSource);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No '" + MESSAGE_SOURCE_BEAN_NAME + "' bean, using [" + this.messageSource + "]");
