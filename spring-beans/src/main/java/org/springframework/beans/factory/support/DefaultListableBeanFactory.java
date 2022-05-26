@@ -868,16 +868,34 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		// xml文件解析中把所有beanNames都存在beanDefinitionNames列表中了,这里拿来用
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
-
+		// 遍历beanNames，触发所有非懒加载单例bean的初始化
 		// Trigger initialization of all non-lazy singleton beans...
 		for (String beanName : beanNames) {
+			// 获取beanName对应的MergedBeanDefinition
+			// 其实就是将父子BeanDefinition合并
+			/**
+			 * 分为以下情况
+			 * 该 BeanDefinition 存在 “父定义”：首先使用 “父定义” 的参数构建一个 RootBeanDefinition，然后再使用该 BeanDefinition 的参数来进行覆盖。
+			 * 该 BeanDefinition 不存在 “父定义”，并且该 BeanDefinition 的类型是 RootBeanDefinition：直接返回该 RootBeanDefinition 的一个克隆。
+			 * 该 BeanDefinition 不存在 “父定义”，但是该 BeanDefinition 的类型不是 RootBeanDefinition：使用该 BeanDefinition 的参数构建一个 RootBeanDefinition。
+			 * 之所以区分出2和3，是因为通常 BeanDefinition 在之前加载到 BeanFactory 中的时候，
+			 * 通常是被封装成 GenericBeanDefinition(XML解析封装) 或 ScannedGenericBeanDefinition(包扫描)，
+			 * 但是从这边之后 bean 的后续流程处理都是针对 RootBeanDefinition
+			 * ，因此在这边会统一将 BeanDefinition 转换成 RootBeanDefinition。
+			 */
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			//bd对应的Bean实例：不是抽象类 && 是单例 && 不是懒加载
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				//判断beanName对应的bean是否为FactoryBean
 				if (isFactoryBean(beanName)) {
+					// 通过beanName获取FactoryBean实例
+					// 通过getBean(&beanName)拿到的是FactoryBean本身；通过getBean(beanName)拿到的是FactoryBean创建的Bean实例
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
 						FactoryBean<?> factory = (FactoryBean<?>) bean;
+						// 判断这个FactoryBean是否希望急切的初始化
 						boolean isEagerInit;
 						if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
 							isEagerInit = AccessController.doPrivileged(
@@ -889,11 +907,14 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 									((SmartFactoryBean<?>) factory).isEagerInit());
 						}
 						if (isEagerInit) {
+							//如果希望急切的初始化，则通过beanName获取bean实例
 							getBean(beanName);
 						}
 					}
 				}
 				else {
+					//如果beanName对应的bean不是FactoryBean，只是普通Bean，通过beanName获取bean实例
+					// 前提还是该Bean 不是抽象&单例&非懒加载
 					getBean(beanName);
 				}
 			}

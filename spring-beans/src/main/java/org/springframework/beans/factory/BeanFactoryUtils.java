@@ -83,10 +83,18 @@ public abstract class BeanFactoryUtils {
 		if (!name.startsWith(BeanFactory.FACTORY_BEAN_PREFIX)) {
 			return name;
 		}
+		//如果beanName带有 "&" 前缀，则去掉
 		return transformedBeanNameCache.computeIfAbsent(name, beanName -> {
 			do {
 				beanName = beanName.substring(BeanFactory.FACTORY_BEAN_PREFIX.length());
 			}
+			/**
+			 * FactoryBean
+			 *
+			 * 一般情况下，Spring 通过反射机制利用 bean 的 class 属性指定实现类来实例化 bean。而 FactoryBean 是一种特殊的 bean，
+			 * 它是个工厂 bean，可以自己创建 bean 实例，如果一个类实现了 FactoryBean 接口，
+			 * 则该类可以自己定义创建实例对象的方法，只需要实现它的 getObject() 方法。
+			 */
 			while (beanName.startsWith(BeanFactory.FACTORY_BEAN_PREFIX));
 			return beanName;
 		});
