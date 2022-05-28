@@ -921,9 +921,14 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 
 		// Trigger post-initialization callback for all applicable beans...
+		// 遍历beanNames，触发所有SmartInitializingSingleton的后初始化回调
+		// 这是 Spring 提供的一个扩展点，在所有非懒加载(lazy-init=false)单例实例化结束后调用。
 		for (String beanName : beanNames) {
+			//拿到beanName对应的bean实例
 			Object singletonInstance = getSingleton(beanName);
+			//判断singletonInstance是否实现了SmartInitializingSingleton接口
 			if (singletonInstance instanceof SmartInitializingSingleton) {
+				//触发SmartInitializingSingleton实现类的afterSingletonsInstantiated方法
 				SmartInitializingSingleton smartSingleton = (SmartInitializingSingleton) singletonInstance;
 				if (System.getSecurityManager() != null) {
 					AccessController.doPrivileged((PrivilegedAction<Object>) () -> {

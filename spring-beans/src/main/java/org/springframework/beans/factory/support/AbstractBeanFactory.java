@@ -1077,16 +1077,30 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 	@Override
 	public boolean isFactoryBean(String name) throws NoSuchBeanDefinitionException {
+		//拿到真正的beanName（去掉&前缀、解析别名）,上面讲过了
 		String beanName = transformedBeanName(name);
+		//尝试从缓存获取Bean实例对象
 		Object beanInstance = getSingleton(beanName, false);
 		if (beanInstance != null) {
+			//beanInstance存在，则直接判断类型是否为FactoryBean
 			return (beanInstance instanceof FactoryBean);
 		}
+		/**
+		 * 之前版本还有有一个else
+		 * else if (containsSingleton(beanName)) {
+		 *    如果beanInstance为null，并且beanName在单例对象缓存中，则代表beanName对应的单例对象为空对象，返回false
+		 *    return false;
+		 * }
+		 */
 		// No singleton instance found -> check bean definition.
+		//如果缓存中不存在此beanName && 父beanFactory是ConfigurableBeanFactory，
+		// 则调用父BeanFactory判断是否为FactoryBean
 		if (!containsBeanDefinition(beanName) && getParentBeanFactory() instanceof ConfigurableBeanFactory) {
 			// No bean definition found in this factory -> delegate to parent.
+			//返回当前name是否对应的FactoryBean
 			return ((ConfigurableBeanFactory) getParentBeanFactory()).isFactoryBean(name);
 		}
+		//通过MergedBeanDefinition来检查beanName对应的Bean是否为FactoryBean
 		return isFactoryBean(beanName, getMergedLocalBeanDefinition(beanName));
 	}
 
@@ -1328,8 +1342,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			RootBeanDefinition previous = null;
 
 			// Check with full lock now in order to enforce the same merged instance.
+			//第一次为null
 			if (containingBd == null) {
-				//检查beanName对应的MergedBeanDefinition是否存在于缓存中
+				//检查beanName对应的MergedBeanDefinition是否存在于缓存中,第一次取出来也是null,因为没缓存
 				mbd = this.mergedBeanDefinitions.get(beanName);
 			}
 			// 如果beanName对应的MergedBeanDefinition不存在于缓存中

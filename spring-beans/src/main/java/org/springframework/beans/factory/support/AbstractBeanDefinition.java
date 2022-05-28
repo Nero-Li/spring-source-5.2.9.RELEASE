@@ -296,58 +296,80 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * </ul>
 	 */
 	public void overrideFrom(BeanDefinition other) {
+		//如有直接覆盖BeanClassName
 		if (StringUtils.hasLength(other.getBeanClassName())) {
 			setBeanClassName(other.getBeanClassName());
 		}
+		//如有作用域直接覆盖作用域
 		if (StringUtils.hasLength(other.getScope())) {
 			setScope(other.getScope());
 		}
+		//覆盖是否抽象
 		setAbstract(other.isAbstract());
+		//如有直接覆盖工厂Bean的姓名
 		if (StringUtils.hasLength(other.getFactoryBeanName())) {
 			setFactoryBeanName(other.getFactoryBeanName());
 		}
+		//如有直接覆盖工厂方法名
 		if (StringUtils.hasLength(other.getFactoryMethodName())) {
 			setFactoryMethodName(other.getFactoryMethodName());
 		}
+		//设置Role
 		setRole(other.getRole());
+		//设置源
 		setSource(other.getSource());
 		copyAttributesFrom(other);
 
+		//如果不是自己实现的BeanDefinition的话，都是继承这个BeanDefinition的
 		if (other instanceof AbstractBeanDefinition) {
 			AbstractBeanDefinition otherAbd = (AbstractBeanDefinition) other;
+			//如有BeanClass直接覆盖
 			if (otherAbd.hasBeanClass()) {
 				setBeanClass(otherAbd.getBeanClass());
 			}
+			//如有构造函数的参数的直接覆盖
 			if (otherAbd.hasConstructorArgumentValues()) {
 				getConstructorArgumentValues().addArgumentValues(other.getConstructorArgumentValues());
 			}
+			//如有属性的参数直接覆盖
 			if (otherAbd.hasPropertyValues()) {
 				getPropertyValues().addPropertyValues(other.getPropertyValues());
 			}
+			//如果有方法重写直接覆盖
 			if (otherAbd.hasMethodOverrides()) {
 				getMethodOverrides().addOverrides(otherAbd.getMethodOverrides());
 			}
+			//设置过懒加载直接覆盖
 			Boolean lazyInit = otherAbd.getLazyInit();
 			if (lazyInit != null) {
 				setLazyInit(lazyInit);
 			}
+			//设置自动装配的模型
 			setAutowireMode(otherAbd.getAutowireMode());
+			//设置依赖检查
 			setDependencyCheck(otherAbd.getDependencyCheck());
+			//设置dependsOn
 			setDependsOn(otherAbd.getDependsOn());
+			//设置自动装配的候选对象
 			setAutowireCandidate(otherAbd.isAutowireCandidate());
+			//Primary注解
 			setPrimary(otherAbd.isPrimary());
 			copyQualifiersFrom(otherAbd);
+			//这两个属性在创建Bean的实例的时候有讲到
 			setInstanceSupplier(otherAbd.getInstanceSupplier());
 			setNonPublicAccessAllowed(otherAbd.isNonPublicAccessAllowed());
 			setLenientConstructorResolution(otherAbd.isLenientConstructorResolution());
+			//如有初始化方法，直接设置
 			if (otherAbd.getInitMethodName() != null) {
 				setInitMethodName(otherAbd.getInitMethodName());
 				setEnforceInitMethod(otherAbd.isEnforceInitMethod());
 			}
+			//如有销毁方法，直接设置
 			if (otherAbd.getDestroyMethodName() != null) {
 				setDestroyMethodName(otherAbd.getDestroyMethodName());
 				setEnforceDestroyMethod(otherAbd.isEnforceDestroyMethod());
 			}
+			//设置是否是合成的
 			setSynthetic(otherAbd.isSynthetic());
 			setResource(otherAbd.getResource());
 		}
