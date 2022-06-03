@@ -94,13 +94,19 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 * @see org.springframework.beans.factory.FactoryBean#getObject()
 	 */
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanName, boolean shouldPostProcess) {
+		//如果是单例的而且在单例缓存(一级缓存)中存在
 		if (factory.isSingleton() && containsSingleton(beanName)) {
 			synchronized (getSingletonMutex()) {
+				//尝试从FactoryBean创建的单例对象的缓存中获取该bean实例
 				Object object = this.factoryBeanObjectCache.get(beanName);
+				//如果获取不到
 				if (object == null) {
+					//调用FactoryBean的getObject方法获取对象实例
 					object = doGetObjectFromFactoryBean(factory, beanName);
 					// Only post-process and store if not put there already during getObject() call above
 					// (e.g. because of circular reference processing triggered by custom getBean calls)
+					// 再一次查看缓存中是否存在FactoryBean所创建的对象
+					// 防止如果自定义了FactoryBean的getObject方法造成循环依赖
 					Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
 					if (alreadyThere != null) {
 						object = alreadyThere;
