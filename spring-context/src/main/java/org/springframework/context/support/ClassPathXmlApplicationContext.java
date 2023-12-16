@@ -85,6 +85,7 @@ public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContex
 		this(new String[] {configLocation}, true, null);
 	}
 
+
 	/**
 	 * Create a new ClassPathXmlApplicationContext, loading the definitions
 	 * from the given XML files and automatically refreshing the context.

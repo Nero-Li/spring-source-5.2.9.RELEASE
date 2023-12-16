@@ -1,5 +1,7 @@
 pluginManagement {
 	repositories {
+		maven { url 'https://maven.aliyun.com/repository/public' } //阿里云
+		maven { url 'https://maven.aliyun.com/repository/gradle-plugin' } //插件
 		gradlePluginPortal()
 		maven { url 'https://repo.spring.io/plugins-release' }
 	}
@@ -31,8 +33,10 @@ include "spring-webflux"
 include "spring-websocket"
 include "framework-bom"
 include "integration-tests"
-
+include 'local-debug'
 rootProject.name = "spring"
 rootProject.children.each {project ->
 	project.buildFileName = "${project.name}.gradle"
 }
+
+

@@ -42,6 +42,7 @@ dependencies {
 	compile(files(cglibRepackJar))
 	compile(files(objenesisRepackJar))
 	compile(project(":spring-jcl"))
+//	compile(project(":kotlin-coroutines"))
 	compileOnly(project(":kotlin-coroutines"))
 	compileOnly("io.projectreactor.tools:blockhound")
 	optional("net.sf.jopt-simple:jopt-simple")
