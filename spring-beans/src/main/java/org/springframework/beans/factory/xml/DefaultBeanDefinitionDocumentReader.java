@@ -120,15 +120,11 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 	 */
 	@SuppressWarnings("deprecation")  // for Environment.acceptsProfiles(String...)
 	protected void doRegisterBeanDefinitions(Element root) {
-		// Any nested <beans> elements will cause recursion in this method. In
-		// order to propagate and preserve <beans> default-* attributes correctly,
-		// keep track of the current (parent) delegate, which may be null. Create
-		// the new (child) delegate with a reference to the parent for fallback purposes,
-		// then ultimately reset this.delegate back to its original (parent) reference.
-		// this behavior emulates a stack of delegates without actually necessitating one.
+		// 如果嵌套<beans/>,则会递归调用该方法,创建代理也只是为了保留beans中原始的属性
+		// 实际上并不需要创建代理
 		BeanDefinitionParserDelegate parent = this.delegate;
 		this.delegate = createDelegate(getReaderContext(), root, parent);
-
+		//比较命名空间是不是beans的http://www.springframework.org/schema/beans
 		if (this.delegate.isDefaultNamespace(root)) {
 			String profileSpec = root.getAttribute(PROFILE_ATTRIBUTE);
 			if (StringUtils.hasText(profileSpec)) {
@@ -145,7 +141,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 				}
 			}
 		}
-
+		//和下面的postProcessXml()方法都是对解析xml的扩展点,可以自定义xml元素,默认为空
 		preProcessXml(root);
 		//重要方法
 		parseBeanDefinitions(root, this.delegate);
@@ -205,8 +201,9 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
 			processBeanDefinition(ele, delegate);
 		}
+		//解析beans标签
 		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
-			// recurse
+			// recurse递归调用
 			doRegisterBeanDefinitions(ele);
 		}
 	}
@@ -318,7 +315,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 			//方法本身不重要,但是用到了装饰者模式以及SPI的思想
 			bdHolder = delegate.decorateBeanDefinitionIfRequired(ele, bdHolder);
 			try {
-				// Register the final decorated instance.
+				//Register the final decorated instance.
 				//完成document到BeanDefinition对象的转换后,将对象缓存.getReaderContext().getRegistry()的结果是之前创建的org.springframework.beans.factory.support.DefaultListableBeanFactory
 				BeanDefinitionReaderUtils.registerBeanDefinition(bdHolder, getReaderContext().getRegistry());
 			}

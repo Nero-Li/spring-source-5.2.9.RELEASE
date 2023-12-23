@@ -416,7 +416,7 @@ public class BeanDefinitionParserDelegate {
 		String nameAttr = ele.getAttribute(NAME_ATTRIBUTE);
 
 		List<String> aliases = new ArrayList<>();
-		//将解析的nameArrt通过,分割成数组
+		//将解析的nameAttr通过,分割成数组
 		if (StringUtils.hasLength(nameAttr)) {
 			String[] nameArr = StringUtils.tokenizeToStringArray(nameAttr, MULTI_VALUE_ATTRIBUTE_DELIMITERS);
 			aliases.addAll(Arrays.asList(nameArr));
@@ -479,11 +479,11 @@ public class BeanDefinitionParserDelegate {
 	 */
 	protected void checkNameUniqueness(String beanName, List<String> aliases, Element beanElement) {
 		String foundName = null;
-
+		//如果beanName存在且set集合中已经存在beanName,则说明有重复
 		if (StringUtils.hasText(beanName) && this.usedNames.contains(beanName)) {
 			foundName = beanName;
 		}
-		if (foundName == null) {
+		if (foundName == null) { //如果通过beanName没找到,则还要通过别名数组来排查,也不能重复
 			foundName = CollectionUtils.findFirstMatch(this.usedNames, aliases);
 		}
 		if (foundName != null) {

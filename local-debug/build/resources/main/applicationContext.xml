@@ -8,4 +8,15 @@
         <property name="name" value="李彦明"/>
         <property name="age" value="18"/>
     </bean>
+
+	<bean class="com.lyming.entity.Person">
+		<property name="name" value="outer"/>
+		<property name="age" value="19"/>
+		<property name="person">
+			<bean class="com.lyming.entity.Person">
+				<property name="name" value="inner"/>
+				<property name="age" value="19"/>
+			</bean>
+		</property>
+	</bean>
 </beans>
